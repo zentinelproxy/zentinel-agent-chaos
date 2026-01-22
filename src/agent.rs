@@ -373,11 +373,8 @@ impl AgentHandlerV2 for ChaosAgent {
                     return AgentResponse::default_allow();
                 }
                 FaultResult::Block(decision) => {
-                    // Convert Decision to AgentResponse
-                    if let Some(status) = decision.block_status() {
-                        return AgentResponse::block(status, decision.block_body().map(String::from));
-                    }
-                    return AgentResponse::default_allow();
+                    // Convert SDK Decision to AgentResponse using build()
+                    return (*decision).build();
                 }
             }
         }
