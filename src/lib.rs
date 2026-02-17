@@ -1,4 +1,4 @@
-//! Chaos Engineering Agent for Sentinel.
+//! Chaos Engineering Agent for Zentinel.
 //!
 //! Provides controlled fault injection for resilience testing including:
 //! - Latency injection (fixed or random range)

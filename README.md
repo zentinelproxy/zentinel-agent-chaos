@@ -1,6 +1,6 @@
-# Chaos Engineering Agent for Sentinel
+# Chaos Engineering Agent for Zentinel
 
-A chaos engineering agent for [Sentinel](https://sentinel.raskell.io) that provides controlled fault injection for resilience testing.
+A chaos engineering agent for [Zentinel](https://zentinelproxy.io) that provides controlled fault injection for resilience testing.
 
 ## Features
 
@@ -16,14 +16,14 @@ A chaos engineering agent for [Sentinel](https://sentinel.raskell.io) that provi
 ## Installation
 
 ```bash
-cargo install sentinel-agent-chaos
+cargo install zentinel-agent-chaos
 ```
 
 Or build from source:
 
 ```bash
-git clone https://github.com/raskell-io/sentinel-agent-chaos.git
-cd sentinel-agent-chaos
+git clone https://github.com/zentinelproxy/zentinel-agent-chaos.git
+cd zentinel-agent-chaos
 cargo build --release
 ```
 
@@ -31,22 +31,22 @@ cargo build --release
 
 ```bash
 # Run with default config file (chaos.yaml)
-sentinel-agent-chaos
+zentinel-agent-chaos
 
 # Specify config file
-sentinel-agent-chaos -c /path/to/config.yaml
+zentinel-agent-chaos -c /path/to/config.yaml
 
 # Specify socket path
-sentinel-agent-chaos -s /tmp/chaos.sock
+zentinel-agent-chaos -s /tmp/chaos.sock
 
 # Run in dry-run mode (log faults without applying)
-sentinel-agent-chaos --dry-run
+zentinel-agent-chaos --dry-run
 
 # Print example configuration
-sentinel-agent-chaos --print-config
+zentinel-agent-chaos --print-config
 
 # Validate configuration
-sentinel-agent-chaos --validate
+zentinel-agent-chaos --validate
 ```
 
 ## Configuration
@@ -237,16 +237,16 @@ safety:
     - "/api/v1/auth"
 ```
 
-## Sentinel Configuration
+## Zentinel Configuration
 
-Add the agent to your Sentinel proxy configuration:
+Add the agent to your Zentinel proxy configuration:
 
 ```kdl
 agents {
     agent "chaos" {
         type "custom"
         transport "unix_socket" {
-            path "/tmp/sentinel-chaos.sock"
+            path "/tmp/zentinel-chaos.sock"
         }
         events ["request_headers"]
         timeout-ms 100

@@ -6,12 +6,12 @@ use crate::targeting::{is_excluded_path, CompiledTargeting};
 use async_trait::async_trait;
 use chrono::{Datelike, NaiveTime, Timelike, Utc};
 use chrono_tz::Tz;
-use sentinel_agent_sdk::prelude::*;
-use sentinel_agent_protocol::v2::{
+use zentinel_agent_sdk::prelude::*;
+use zentinel_agent_protocol::v2::{
     AgentCapabilities, AgentFeatures, AgentHandlerV2, CounterMetric, DrainReason,
     GaugeMetric, HealthStatus, MetricsReport, ShutdownReason,
 };
-use sentinel_agent_protocol::{AgentResponse, EventType, RequestHeadersEvent};
+use zentinel_agent_protocol::{AgentResponse, EventType, RequestHeadersEvent};
 use std::collections::HashMap;
 use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::sync::Arc;
@@ -274,7 +274,7 @@ impl Agent for ChaosAgent {
 impl AgentHandlerV2 for ChaosAgent {
     fn capabilities(&self) -> AgentCapabilities {
         AgentCapabilities::new(
-            "sentinel-agent-chaos",
+            "zentinel-agent-chaos",
             "Chaos Engineering Agent",
             env!("CARGO_PKG_VERSION"),
         )
@@ -385,17 +385,17 @@ impl AgentHandlerV2 for ChaosAgent {
     fn health_status(&self) -> HealthStatus {
         if self.is_draining() {
             HealthStatus::degraded(
-                "sentinel-agent-chaos",
+                "zentinel-agent-chaos",
                 vec!["fault-injection".to_string()],
                 1.0,
             )
         } else {
-            HealthStatus::healthy("sentinel-agent-chaos")
+            HealthStatus::healthy("zentinel-agent-chaos")
         }
     }
 
     fn metrics_report(&self) -> Option<MetricsReport> {
-        let mut report = MetricsReport::new("sentinel-agent-chaos", 10_000);
+        let mut report = MetricsReport::new("zentinel-agent-chaos", 10_000);
 
         // Add counter metrics
         report

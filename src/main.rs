@@ -2,16 +2,16 @@
 
 use anyhow::Result;
 use clap::Parser;
-use sentinel_agent_chaos::{ChaosAgent, Config};
-use sentinel_agent_sdk::v2::{AgentRunnerV2, TransportConfig};
+use zentinel_agent_chaos::{ChaosAgent, Config};
+use zentinel_agent_sdk::v2::{AgentRunnerV2, TransportConfig};
 use std::net::SocketAddr;
 use std::path::PathBuf;
 use tracing::info;
 use tracing_subscriber::EnvFilter;
 
 #[derive(Parser, Debug)]
-#[command(name = "sentinel-agent-chaos")]
-#[command(about = "Chaos Engineering agent for Sentinel - controlled fault injection for resilience testing")]
+#[command(name = "zentinel-agent-chaos")]
+#[command(about = "Chaos Engineering agent for Zentinel - controlled fault injection for resilience testing")]
 #[command(version)]
 struct Args {
     /// Path to configuration file
@@ -19,7 +19,7 @@ struct Args {
     config: PathBuf,
 
     /// Unix socket path
-    #[arg(short, long, default_value = "/tmp/sentinel-chaos.sock")]
+    #[arg(short, long, default_value = "/tmp/zentinel-chaos.sock")]
     socket: PathBuf,
 
     /// gRPC server address (e.g., "0.0.0.0:50051")
@@ -45,7 +45,7 @@ struct Args {
 
 fn print_example_config() {
     let example = r#"# Chaos Engineering Agent Configuration
-# See https://sentinel.raskell.io/agents/chaos/ for full documentation
+# See https://zentinelproxy.io/agents/chaos/ for full documentation
 
 settings:
   enabled: true                    # Global kill switch

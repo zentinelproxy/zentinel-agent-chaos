@@ -2,7 +2,7 @@
 
 use crate::config::Fault;
 use rand::Rng;
-use sentinel_agent_sdk::Decision;
+use zentinel_agent_sdk::Decision;
 use std::collections::HashMap;
 use std::time::Duration;
 use tracing::{debug, info};
