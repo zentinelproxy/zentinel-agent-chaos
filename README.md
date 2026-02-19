@@ -31,22 +31,22 @@ cargo build --release
 
 ```bash
 # Run with default config file (chaos.yaml)
-zentinel-agent-chaos
+zentinel-chaos-agent
 
 # Specify config file
-zentinel-agent-chaos -c /path/to/config.yaml
+zentinel-chaos-agent -c /path/to/config.yaml
 
 # Specify socket path
-zentinel-agent-chaos -s /tmp/chaos.sock
+zentinel-chaos-agent -s /tmp/chaos.sock
 
 # Run in dry-run mode (log faults without applying)
-zentinel-agent-chaos --dry-run
+zentinel-chaos-agent --dry-run
 
 # Print example configuration
-zentinel-agent-chaos --print-config
+zentinel-chaos-agent --print-config
 
 # Validate configuration
-zentinel-agent-chaos --validate
+zentinel-chaos-agent --validate
 ```
 
 ## Configuration

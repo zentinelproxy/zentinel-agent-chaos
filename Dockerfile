@@ -10,7 +10,7 @@
 ################################################################################
 FROM gcr.io/distroless/cc-debian12:nonroot AS prebuilt
 
-COPY zentinel-agent-chaos /zentinel-agent-chaos
+COPY zentinel-chaos-agent /zentinel-chaos-agent
 
 LABEL org.opencontainers.image.title="Zentinel Chaos Engineering Agent" \
       org.opencontainers.image.description="Zentinel Chaos Engineering Agent for Zentinel reverse proxy" \
@@ -22,4 +22,4 @@ ENV RUST_LOG=info,zentinel_agent_chaos=debug \
 
 USER nonroot:nonroot
 
-ENTRYPOINT ["/zentinel-agent-chaos"]
+ENTRYPOINT ["/zentinel-chaos-agent"]
