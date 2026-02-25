@@ -245,10 +245,8 @@ Add the agent to your Zentinel proxy configuration:
 agents {
     agent "chaos" {
         type "custom"
-        transport "unix_socket" {
-            path "/tmp/zentinel-chaos.sock"
-        }
-        events ["request_headers"]
+        unix-socket "/tmp/zentinel-chaos.sock"
+        events "request_headers"
         timeout-ms 100
         failure-mode "open"
     }
