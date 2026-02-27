@@ -34,11 +34,7 @@ impl CompiledTargeting {
             })
             .collect();
 
-        let methods = targeting
-            .methods
-            .iter()
-            .map(|m| m.to_uppercase())
-            .collect();
+        let methods = targeting.methods.iter().map(|m| m.to_uppercase()).collect();
 
         Self {
             paths,
@@ -49,12 +45,7 @@ impl CompiledTargeting {
     }
 
     /// Check if a request matches the targeting rules.
-    pub fn matches(
-        &self,
-        method: &str,
-        path: &str,
-        headers: &HashMap<String, String>,
-    ) -> bool {
+    pub fn matches(&self, method: &str, path: &str, headers: &HashMap<String, String>) -> bool {
         // Check method if specified
         if !self.methods.is_empty() && !self.methods.contains(&method.to_uppercase()) {
             return false;
@@ -96,9 +87,7 @@ impl CompiledTargeting {
     fn matches_headers(&self, headers: &HashMap<String, String>) -> bool {
         for (name, expected_value) in &self.headers {
             let name_lower = name.to_lowercase();
-            let found = headers
-                .iter()
-                .find(|(k, _)| k.to_lowercase() == name_lower);
+            let found = headers.iter().find(|(k, _)| k.to_lowercase() == name_lower);
 
             match found {
                 Some((_, value)) if value == expected_value => continue,
@@ -111,9 +100,9 @@ impl CompiledTargeting {
 
 /// Check if a path matches any of the excluded paths.
 pub fn is_excluded_path(path: &str, excluded_paths: &[String]) -> bool {
-    excluded_paths.iter().any(|excluded| {
-        path == excluded || path.starts_with(&format!("{}/", excluded))
-    })
+    excluded_paths
+        .iter()
+        .any(|excluded| path == excluded || path.starts_with(&format!("{}/", excluded)))
 }
 
 #[cfg(test)]
@@ -141,7 +130,9 @@ mod tests {
     #[test]
     fn test_exact_path_matching() {
         let targeting = create_targeting(
-            vec![PathMatcher::Exact { exact: "/api/users".to_string() }],
+            vec![PathMatcher::Exact {
+                exact: "/api/users".to_string(),
+            }],
             vec![],
             HashMap::new(),
             100,
@@ -156,7 +147,9 @@ mod tests {
     #[test]
     fn test_prefix_path_matching() {
         let targeting = create_targeting(
-            vec![PathMatcher::Prefix { prefix: "/api/".to_string() }],
+            vec![PathMatcher::Prefix {
+                prefix: "/api/".to_string(),
+            }],
             vec![],
             HashMap::new(),
             100,
@@ -171,7 +164,9 @@ mod tests {
     #[test]
     fn test_regex_path_matching() {
         let targeting = create_targeting(
-            vec![PathMatcher::Regex { regex: r"^/api/v\d+/.*".to_string() }],
+            vec![PathMatcher::Regex {
+                regex: r"^/api/v\d+/.*".to_string(),
+            }],
             vec![],
             HashMap::new(),
             100,
@@ -185,12 +180,7 @@ mod tests {
 
     #[test]
     fn test_method_matching() {
-        let targeting = create_targeting(
-            vec![],
-            vec!["GET", "POST"],
-            HashMap::new(),
-            100,
-        );
+        let targeting = create_targeting(vec![], vec!["GET", "POST"], HashMap::new(), 100);
         let compiled = CompiledTargeting::new(&targeting);
 
         assert!(compiled.matches("GET", "/test", &HashMap::new()));
@@ -238,7 +228,9 @@ mod tests {
     #[test]
     fn test_combined_matching() {
         let targeting = create_targeting(
-            vec![PathMatcher::Prefix { prefix: "/api/".to_string() }],
+            vec![PathMatcher::Prefix {
+                prefix: "/api/".to_string(),
+            }],
             vec!["POST"],
             HashMap::from([("x-test", "yes")]),
             100,

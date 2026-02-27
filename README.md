@@ -15,14 +15,28 @@ A chaos engineering agent for [Zentinel](https://zentinelproxy.io) that provides
 
 ## Installation
 
+### Using Bundle (Recommended)
+
+```bash
+# Install just this agent
+zentinel bundle install chaos
+
+# Or install all bundled agents
+zentinel bundle install
+```
+
+The bundle command downloads the correct binary for your platform and places it in the standard location. See the [bundle documentation](https://zentinelproxy.io/docs/deployment/bundle/) for details.
+
+### Using Cargo
+
 ```bash
 cargo install zentinel-agent-chaos
 ```
 
-Or build from source:
+### From Source
 
 ```bash
-git clone https://github.com/zentinelproxy/zentinel-agent-chaos.git
+git clone https://github.com/zentinelproxy/zentinel-agent-chaos
 cd zentinel-agent-chaos
 cargo build --release
 ```

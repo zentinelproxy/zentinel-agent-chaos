@@ -2,16 +2,18 @@
 
 use anyhow::Result;
 use clap::Parser;
-use zentinel_agent_chaos::{ChaosAgent, Config};
-use zentinel_agent_sdk::v2::{AgentRunnerV2, TransportConfig};
 use std::net::SocketAddr;
 use std::path::PathBuf;
 use tracing::info;
 use tracing_subscriber::EnvFilter;
+use zentinel_agent_chaos::{ChaosAgent, Config};
+use zentinel_agent_sdk::v2::{AgentRunnerV2, TransportConfig};
 
 #[derive(Parser, Debug)]
 #[command(name = "zentinel-agent-chaos")]
-#[command(about = "Chaos Engineering agent for Zentinel - controlled fault injection for resilience testing")]
+#[command(
+    about = "Chaos Engineering agent for Zentinel - controlled fault injection for resilience testing"
+)]
 #[command(version)]
 struct Args {
     /// Path to configuration file
@@ -137,8 +139,8 @@ async fn main() -> Result<()> {
     }
 
     // Initialize logging
-    let filter = EnvFilter::try_from_default_env()
-        .unwrap_or_else(|_| EnvFilter::new(&args.log_level));
+    let filter =
+        EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new(&args.log_level));
 
     tracing_subscriber::fmt()
         .with_env_filter(filter)
@@ -189,7 +191,10 @@ async fn main() -> Result<()> {
     runner = match transport {
         TransportConfig::Grpc { address } => runner.with_grpc(address),
         TransportConfig::Uds { path } => runner.with_uds(path),
-        TransportConfig::Both { grpc_address, uds_path } => runner.with_both(grpc_address, uds_path),
+        TransportConfig::Both {
+            grpc_address,
+            uds_path,
+        } => runner.with_both(grpc_address, uds_path),
     };
 
     runner.run().await?;

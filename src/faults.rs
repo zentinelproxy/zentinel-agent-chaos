@@ -2,10 +2,10 @@
 
 use crate::config::Fault;
 use rand::Rng;
-use zentinel_agent_sdk::Decision;
 use std::collections::HashMap;
 use std::time::Duration;
 use tracing::{debug, info};
+use zentinel_agent_sdk::Decision;
 
 /// Result of applying a fault.
 #[derive(Debug)]
@@ -24,12 +24,33 @@ pub async fn apply_fault(
     log_injections: bool,
 ) -> FaultResult {
     match fault {
-        Fault::Latency { fixed_ms, min_ms, max_ms } => {
-            apply_latency(*fixed_ms, *min_ms, *max_ms, experiment_id, dry_run, log_injections).await
+        Fault::Latency {
+            fixed_ms,
+            min_ms,
+            max_ms,
+        } => {
+            apply_latency(
+                *fixed_ms,
+                *min_ms,
+                *max_ms,
+                experiment_id,
+                dry_run,
+                log_injections,
+            )
+            .await
         }
-        Fault::Error { status, message, headers } => {
-            apply_error(*status, message.as_deref(), headers, experiment_id, dry_run, log_injections)
-        }
+        Fault::Error {
+            status,
+            message,
+            headers,
+        } => apply_error(
+            *status,
+            message.as_deref(),
+            headers,
+            experiment_id,
+            dry_run,
+            log_injections,
+        ),
         Fault::Timeout { duration_ms } => {
             apply_timeout(*duration_ms, experiment_id, dry_run, log_injections).await
         }
@@ -39,9 +60,7 @@ pub async fn apply_fault(
         Fault::Corrupt { probability } => {
             apply_corrupt(*probability, experiment_id, dry_run, log_injections)
         }
-        Fault::Reset => {
-            apply_reset(experiment_id, dry_run, log_injections)
-        }
+        Fault::Reset => apply_reset(experiment_id, dry_run, log_injections),
     }
 }
 
@@ -78,7 +97,9 @@ async fn apply_latency(
         tokio::time::sleep(duration).await;
     }
 
-    FaultResult::Allow { delay: Some(duration) }
+    FaultResult::Allow {
+        delay: Some(duration),
+    }
 }
 
 /// Apply error fault - return HTTP error immediately.
@@ -189,7 +210,9 @@ fn apply_throttle(
     let estimated_bytes = 10_240u64;
     let delay_ms = (estimated_bytes * 1000) / bytes_per_second;
 
-    FaultResult::Allow { delay: Some(Duration::from_millis(delay_ms)) }
+    FaultResult::Allow {
+        delay: Some(Duration::from_millis(delay_ms)),
+    }
 }
 
 /// Apply corrupt fault - inject garbage into response.
@@ -238,11 +261,7 @@ fn apply_corrupt(
 }
 
 /// Apply reset fault - simulate connection reset.
-fn apply_reset(
-    experiment_id: &str,
-    dry_run: bool,
-    log_injections: bool,
-) -> FaultResult {
+fn apply_reset(experiment_id: &str, dry_run: bool, log_injections: bool) -> FaultResult {
     if log_injections {
         info!(
             experiment = experiment_id,

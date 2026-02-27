@@ -6,16 +6,16 @@ use crate::targeting::{is_excluded_path, CompiledTargeting};
 use async_trait::async_trait;
 use chrono::{Datelike, NaiveTime, Timelike, Utc};
 use chrono_tz::Tz;
-use zentinel_agent_sdk::prelude::*;
-use zentinel_agent_protocol::v2::{
-    AgentCapabilities, AgentFeatures, AgentHandlerV2, CounterMetric, DrainReason,
-    GaugeMetric, HealthStatus, MetricsReport, ShutdownReason,
-};
-use zentinel_agent_protocol::{AgentResponse, EventType, RequestHeadersEvent};
 use std::collections::HashMap;
 use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::sync::Arc;
 use tracing::{debug, info, warn};
+use zentinel_agent_protocol::v2::{
+    AgentCapabilities, AgentFeatures, AgentHandlerV2, CounterMetric, DrainReason, GaugeMetric,
+    HealthStatus, MetricsReport, ShutdownReason,
+};
+use zentinel_agent_protocol::{AgentResponse, EventType, RequestHeadersEvent};
+use zentinel_agent_sdk::prelude::*;
 
 /// Chaos Engineering agent.
 pub struct ChaosAgent {
@@ -398,9 +398,10 @@ impl AgentHandlerV2 for ChaosAgent {
         let mut report = MetricsReport::new("zentinel-agent-chaos", 10_000);
 
         // Add counter metrics
-        report
-            .counters
-            .push(CounterMetric::new("chaos_requests_total", self.total_requests()));
+        report.counters.push(CounterMetric::new(
+            "chaos_requests_total",
+            self.total_requests(),
+        ));
 
         report.counters.push(CounterMetric::new(
             "chaos_faults_injected_total",

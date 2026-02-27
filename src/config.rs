@@ -147,7 +147,10 @@ where
 {
     let days: Vec<String> = Deserialize::deserialize(deserializer)?;
     days.into_iter()
-        .map(|s| parse_weekday(&s).ok_or_else(|| serde::de::Error::custom(format!("Invalid weekday: {}", s))))
+        .map(|s| {
+            parse_weekday(&s)
+                .ok_or_else(|| serde::de::Error::custom(format!("Invalid weekday: {}", s)))
+        })
         .collect()
 }
 
@@ -244,17 +247,11 @@ impl Targeting {
 #[serde(untagged)]
 pub enum PathMatcher {
     /// Exact path match.
-    Exact {
-        exact: String,
-    },
+    Exact { exact: String },
     /// Path prefix match.
-    Prefix {
-        prefix: String,
-    },
+    Prefix { prefix: String },
     /// Regex pattern match.
-    Regex {
-        regex: String,
-    },
+    Regex { regex: String },
 }
 
 impl PathMatcher {
@@ -327,7 +324,11 @@ impl Fault {
     /// Validate the fault configuration.
     pub fn validate(&self) -> Result<()> {
         match self {
-            Fault::Latency { fixed_ms, min_ms, max_ms } => {
+            Fault::Latency {
+                fixed_ms,
+                min_ms,
+                max_ms,
+            } => {
                 if *fixed_ms == 0 && *min_ms == 0 && *max_ms == 0 {
                     return Err(anyhow!(
                         "Latency fault must specify either fixed_ms or min_ms/max_ms"
@@ -409,7 +410,10 @@ experiments:
         let config: Config = serde_yaml::from_str(yaml).unwrap();
         assert_eq!(config.experiments.len(), 1);
         assert_eq!(config.experiments[0].id, "test-latency");
-        assert!(matches!(config.experiments[0].fault, Fault::Latency { fixed_ms: 500, .. }));
+        assert!(matches!(
+            config.experiments[0].fault,
+            Fault::Latency { fixed_ms: 500, .. }
+        ));
     }
 
     #[test]
