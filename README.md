@@ -1,317 +1,237 @@
-# Chaos Engineering Agent for Zentinel
+<p align="center">
+  <a href="https://zentinelproxy.io">
+    <picture>
+      <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/zentinelproxy/design/main/marks/lockup/zentinel-lockup-dark.svg">
+      <img alt="Zentinel" src="https://raw.githubusercontent.com/zentinelproxy/design/main/marks/lockup/zentinel-lockup-light.svg" height="52">
+    </picture>
+  </a>
+</p>
 
-A chaos engineering agent for [Zentinel](https://zentinelproxy.io) that provides controlled fault injection for resilience testing.
+<h3 align="center">Chaos agent</h3>
 
-## Features
+<p align="center">Injects latency and synthetic error responses into selected requests at the request-headers phase, for resilience testing.</p>
 
-- **Latency Injection** - Add fixed or random delays to requests
-- **Error Injection** - Return specific HTTP status codes
-- **Timeout Simulation** - Simulate upstream timeouts (504)
-- **Response Corruption** - Inject garbage into responses
-- **Connection Reset** - Simulate connection failures (502)
-- **Bandwidth Throttling** - Slow response delivery
-- **Flexible Targeting** - Path, header, method, and percentage-based selection
-- **Safety Controls** - Schedule windows, excluded paths, kill switch, dry run mode
+<p align="center">
+  <a href="https://github.com/zentinelproxy/zentinel-agent-chaos/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/zentinelproxy/zentinel-agent-chaos/actions/workflows/ci.yml/badge.svg"></a>
+  <img alt="License: MIT" src="https://img.shields.io/badge/license-MIT-9b4d8a?style=flat&amp;labelColor=1f161e">
+  <img alt="Agent protocol v2" src="https://img.shields.io/badge/agent%20protocol-v2-f68d31?style=flat&amp;labelColor=1f161e">
+</p>
 
-## Installation
+<p align="center">
+  <a href="https://registry.zentinelproxy.io/chaos/">Registry</a> &middot;
+  <a href="https://docs.zentinelproxy.io">Docs</a> &middot;
+  <a href="https://github.com/zentinelproxy">All repositories</a>
+</p>
 
-### Using Bundle (Recommended)
+The chaos agent lets you test how clients and services behave when a dependency
+is slow or failing, without touching the upstream. You describe experiments in a
+YAML file: which requests to target (path, method, header, percentage) and which
+fault to apply. On a match the agent either delays the request and lets it
+through, or answers it itself with an error response, so the upstream is never
+called. Safety controls (a kill switch, dry-run mode, schedule windows, excluded
+paths) bound what it can affect. Because it is a test tool, run its filter with
+`failure-mode "open"`: if the agent is down, requests pass through untouched.
+
+## Quick start
 
 ```bash
-# Install just this agent
 zentinel bundle install chaos
-
-# Or install all bundled agents
-zentinel bundle install
 ```
 
-The bundle command downloads the correct binary for your platform and places it in the standard location. See the [bundle documentation](https://docs.zentinelproxy.io/deployment/bundle/) for details.
-
-### Using Cargo
-
-Not supported. `zentinel-agent-chaos` is not published on crates.io, and it depends on
-`zentinel-agent-protocol` through a path dependency, so neither
-`cargo install zentinel-agent-chaos` nor `cargo install --git` works. Use a prebuilt
-binary or build from source (below).
-
-### Prebuilt Binaries
-
-Each [release](https://github.com/zentinelproxy/zentinel-agent-chaos/releases) ships binaries
-for `linux-x86_64`, `linux-aarch64`, and `darwin-aarch64`:
-
-```bash
-VERSION=0.4.0
-PLATFORM=linux-x86_64   # or linux-aarch64, darwin-aarch64
-curl -fsSL -o zentinel-chaos-agent.tar.gz \
-  "https://github.com/zentinelproxy/zentinel-agent-chaos/releases/download/v${VERSION}/zentinel-chaos-agent-${VERSION}-${PLATFORM}.tar.gz"
-tar -xzf zentinel-chaos-agent.tar.gz
-sudo install -m 0755 zentinel-chaos-agent /usr/local/bin/
-```
-
-### From Source
-
-Building from source requires the [zentinel](https://github.com/zentinelproxy/zentinel) repository checked out
-**next to** this one, because `zentinel-agent-protocol` is a path dependency:
-
-```bash
-git clone https://github.com/zentinelproxy/zentinel
-git clone https://github.com/zentinelproxy/zentinel-agent-chaos
-cd zentinel-agent-chaos
-cargo build --release
-```
-
-## Usage
-
-```bash
-# Run with default config file (chaos.yaml)
-zentinel-chaos-agent
-
-# Specify config file
-zentinel-chaos-agent -c /path/to/config.yaml
-
-# Specify socket path
-zentinel-chaos-agent -s /tmp/chaos.sock
-
-# Run in dry-run mode (log faults without applying)
-zentinel-chaos-agent --dry-run
-
-# Print example configuration
-zentinel-chaos-agent --print-config
-
-# Validate configuration
-zentinel-chaos-agent --validate
-```
-
-## Configuration
-
-### Basic Structure
-
-```yaml
-settings:
-  enabled: true                    # Global kill switch
-  dry_run: false                   # Log faults without applying
-  log_injections: true             # Log when faults are injected
-
-safety:
-  max_affected_percent: 50         # Never affect more than 50% of traffic
-  schedule:                        # Only active during these windows
-    - days: [mon, tue, wed, thu, fri]
-      start: "09:00"
-      end: "17:00"
-      timezone: "UTC"
-  excluded_paths:                  # Never inject faults here
-    - "/health"
-    - "/ready"
-    - "/metrics"
-
-experiments:
-  # Your fault experiments here
-```
-
-### Fault Types
-
-#### Latency Injection
-
-Add delay before proxying requests:
+Write a `chaos.yaml` with one experiment that only fires when the request
+carries a header:
 
 ```yaml
 experiments:
-  - id: "api-latency"
-    enabled: true
+  - id: "header-latency"
     targeting:
-      paths:
-        - prefix: "/api/"
-      percentage: 10
-    fault:
-      type: latency
-      fixed_ms: 500                # Fixed 500ms delay
-
-  - id: "random-latency"
-    enabled: true
-    targeting:
-      paths:
-        - prefix: "/api/"
-      percentage: 5
-    fault:
-      type: latency
-      min_ms: 100                  # Random delay between 100-1000ms
-      max_ms: 1000
-```
-
-#### Error Injection
-
-Return HTTP errors immediately:
-
-```yaml
-experiments:
-  - id: "payment-errors"
-    enabled: true
-    targeting:
-      paths:
-        - exact: "/api/payments"
-      percentage: 5
-    fault:
-      type: error
-      status: 500
-      message: "Chaos: Internal Server Error"
       headers:
-        x-chaos-injected: "true"
-```
-
-#### Timeout Simulation
-
-Simulate upstream timeouts:
-
-```yaml
-experiments:
-  - id: "upstream-timeout"
-    enabled: true
-    targeting:
-      paths:
-        - regex: "^/api/external/.*"
-      percentage: 2
+        x-chaos-latency: "true"
     fault:
-      type: timeout
-      duration_ms: 30000           # 30 second timeout
+      type: latency
+      fixed_ms: 500
 ```
 
-#### Response Corruption
+Start the agent (it reads `chaos.yaml` from the working directory unless `-c` says otherwise):
 
-Inject garbage into responses (probabilistic):
-
-```yaml
-experiments:
-  - id: "corrupt-response"
-    enabled: true
-    targeting:
-      percentage: 1
-    fault:
-      type: corrupt
-      probability: 0.5             # 50% of targeted requests get corrupted
+```bash
+zentinel-chaos-agent -c chaos.yaml --socket /tmp/zentinel-chaos.sock
 ```
 
-#### Connection Reset
-
-Simulate connection failures:
-
-```yaml
-experiments:
-  - id: "connection-reset"
-    enabled: true
-    targeting:
-      paths:
-        - prefix: "/api/unstable/"
-      percentage: 3
-    fault:
-      type: reset
-```
-
-### Targeting Options
-
-#### Path Matching
-
-```yaml
-targeting:
-  paths:
-    - exact: "/api/users"          # Exact match
-    - prefix: "/api/"              # Prefix match
-    - regex: "^/api/v\\d+/.*"      # Regex match
-```
-
-#### Method Filtering
-
-```yaml
-targeting:
-  methods: ["GET", "POST"]         # Only affect these methods
-```
-
-#### Header-Based Activation
-
-```yaml
-targeting:
-  headers:
-    x-chaos-enabled: "true"        # Only if header matches
-```
-
-#### Percentage Selection
-
-```yaml
-targeting:
-  percentage: 10                   # Affect 10% of matching requests
-```
-
-### Schedule Windows
-
-Only run chaos during specific times:
-
-```yaml
-safety:
-  schedule:
-    - days: [mon, tue, wed, thu, fri]
-      start: "09:00"
-      end: "17:00"
-      timezone: "America/New_York"
-    - days: [sat]
-      start: "10:00"
-      end: "14:00"
-      timezone: "UTC"
-```
-
-### Excluded Paths
-
-Protect critical endpoints:
-
-```yaml
-safety:
-  excluded_paths:
-    - "/health"
-    - "/ready"
-    - "/metrics"
-    - "/api/v1/auth"
-```
-
-## Zentinel Configuration
-
-Add the agent to your Zentinel proxy configuration:
+Wire it into a route:
 
 ```kdl
+system {
+    worker-threads 0
+}
+
+listeners {
+    listener "http" {
+        address "0.0.0.0:8080"
+        protocol "http"
+    }
+}
+
+upstreams {
+    upstream "backend" {
+        target "127.0.0.1:3000"
+    }
+}
+
 agents {
-    agent "chaos" {
-        type "custom"
+    agent "chaos" type="custom" {
         unix-socket "/tmp/zentinel-chaos.sock"
         events "request_headers"
-        timeout-ms 100
+        timeout-ms 5000   // must exceed the longest latency or timeout fault
+    }
+}
+
+filters {
+    filter "chaos" {
+        type "agent"
+        agent "chaos"
         failure-mode "open"
+    }
+}
+
+routes {
+    route "default" {
+        matches { path-prefix "/" }
+        upstream "backend"
+        filters "chaos"
     }
 }
 ```
 
-## Safety Best Practices
+`curl -H 'x-chaos-latency: true' http://localhost:8080/` now takes about 500 ms
+longer than the same request without the header.
 
-1. **Start with dry run mode** - Use `--dry-run` to verify targeting before enabling
-2. **Use low percentages** - Start with 1-5% and increase gradually
-3. **Always exclude health checks** - Ensure `/health`, `/ready` are in `excluded_paths`
-4. **Set schedule windows** - Only run chaos during business hours when teams can respond
-5. **Use header triggers for testing** - Target `x-chaos-enabled: true` for controlled testing
-6. **Monitor injection counts** - Track how many faults are being injected
+## Install
 
-## Response Headers
-
-When faults are injected, the following headers are added:
-
-| Header | Description |
-|--------|-------------|
-| `x-chaos-injected` | Always `"true"` when a fault was injected |
-| `x-chaos-experiment` | ID of the experiment that was applied |
-
-## Testing
-
-Run the test suite:
+### Bundle (recommended)
 
 ```bash
-cargo test
+zentinel bundle install chaos
 ```
+
+Downloads the release binary pinned in Zentinel's bundle lock and installs it as `zentinel-chaos-agent`.
+
+### Release binaries
+
+Tarballs for `linux-x86_64`, `linux-aarch64` and `darwin-aarch64` are attached to each [release](https://github.com/zentinelproxy/zentinel-agent-chaos/releases).
+
+### From source
+
+`cargo install --git` does not work for this crate: it depends on a sibling
+checkout of [`zentinel-agent-rust-sdk`](https://github.com/zentinelproxy/zentinel-agent-rust-sdk) by path.
+Clone both side by side (you also need `protoc`):
+
+```bash
+git clone https://github.com/zentinelproxy/zentinel-agent-rust-sdk
+git clone https://github.com/zentinelproxy/zentinel-agent-chaos
+cd zentinel-agent-chaos
+cargo build --release   # target/release/zentinel-chaos-agent
+```
+
+## Configuration
+
+The agent takes its settings from its command line and its YAML file. It has an
+`on_configure` handler, but that only logs what it receives, and Zentinel 0.6.50
+does not forward an `agent { config { ... } }` block in any case, so set
+everything here.
+
+| Option | Default | Meaning |
+|---|---|---|
+| `-c`, `--config` | `chaos.yaml` | Path to the YAML file. The file must exist. |
+| `-s`, `--socket` | `/tmp/zentinel-chaos.sock` | Unix socket to listen on. |
+| `--grpc-address` | none | Also serve gRPC on this address (e.g. `0.0.0.0:50051`), next to the socket. |
+| `-L`, `--log-level` | `info` | Log level. `RUST_LOG`, if set, takes precedence. |
+| `--dry-run` | off | Log faults instead of applying them (overrides `settings.dry_run`). |
+| `--validate` | off | Load and validate the file, then exit. |
+| `--print-config` | off | Print an example file and exit. |
+
+### YAML file
+
+Unknown keys are ignored, so check spelling with care.
+
+| Option | Default | Meaning |
+|---|---|---|
+| `settings.enabled` | `true` | Kill switch. `false` lets every request through. |
+| `settings.dry_run` | `false` | Log faults instead of applying them. |
+| `settings.log_injections` | `true` | Log each injected fault at `info`. |
+| `safety.max_affected_percent` | `50` | Validated (0 to 100) but **not enforced**: nothing caps total affected traffic. |
+| `safety.schedule` | none (always active) | List of windows `{days, start, end, timezone}`. Faults apply only inside one. `days` takes `mon`..`sun`, times are `HH:MM`, `start` must be before `end` (no window across midnight), `timezone` is an IANA name and falls back to UTC if it does not parse. |
+| `safety.excluded_paths` | `/health`, `/ready`, `/metrics` | Never targeted: the path itself and anything under `<path>/`. The default applies only when the whole `safety` section is absent. |
+| `experiments[].id` | required | Unique id, used in logs and the `x-chaos-experiment` header. |
+| `experiments[].enabled` | `true` | Turn one experiment off. |
+| `experiments[].description` | empty | Free text. |
+| `experiments[].targeting.paths` | any path | List of `{exact: ...}`, `{prefix: ...}` or `{regex: ...}`; any one must match. |
+| `experiments[].targeting.methods` | any method | List of HTTP methods, case-insensitive. |
+| `experiments[].targeting.headers` | none | Map of header name to exact value; all must match. Names are case-insensitive, only the first value of a header is compared. |
+| `experiments[].targeting.percentage` | `100` | Share of matching requests to affect, 0 to 100. |
+| `experiments[].fault` | required | One of the faults below, selected by `type`. |
+
+Paths are matched against the request URI as Zentinel sends it, which includes
+the query string: `exact: "/api/payments"` does not match
+`/api/payments?id=1`, and `/health?probe=1` is **not** excluded by `/health`.
+Use `prefix` or `regex` where a query string can occur.
+
+### Faults
+
+| `type` | Fields | What happens |
+|---|---|---|
+| `latency` | `fixed_ms`, or `min_ms` and `max_ms` | Waits (fixed, or uniformly random in the range), then lets the request through. |
+| `error` | `status` (100 to 599), `message`, `headers` | Answers with that status, `message` as a plain-text body (default `Chaos fault injected`) and the extra headers. |
+| `timeout` | `duration_ms` | Waits, then answers `504 Gateway Timeout`. |
+| `reset` | none | Answers `502 Bad Gateway`. It does not reset the connection. |
+| `corrupt` | `probability` (0.0 to 1.0) | With that probability, answers `200` with 50 to 499 random printable ASCII characters (labelled `application/octet-stream`) instead of the upstream's response. It does not alter a real response. |
+| `throttle` | `bytes_per_second` | **Approximation:** waits `10240 * 1000 / bytes_per_second` ms (the time to send 10 KiB), then lets the request through. Response bandwidth is not limited. |
+
+Responses generated by `error`, `timeout`, `reset` and `corrupt` carry
+`x-chaos-injected: true` and `x-chaos-experiment: <id>`. Delayed requests
+(`latency`, `throttle`) get no marker header.
+
+Full reference: <https://registry.zentinelproxy.io/chaos/>
+
+## How it works
+
+The agent subscribes to `request_headers` only. For each request it checks, in
+order: the kill switch, the schedule, the excluded paths, then each enabled
+experiment in file order. The first experiment whose targeting matches and that
+is selected by its `percentage` applies its fault; at most one fault applies per
+request. In dry-run mode the match is logged and the request passes unchanged.
+
+The delay happens inside the agent call, so the agent's `timeout-ms` (and the
+filter's, if set) must be longer than the longest `latency`, `throttle` or
+`timeout` fault. Otherwise Zentinel gives up on the agent first and, with
+`failure-mode "open"`, forwards the request without the fault.
+
+## Development
+
+```bash
+git clone https://github.com/zentinelproxy/zentinel-agent-rust-sdk ../zentinel-agent-rust-sdk
+cargo build
+cargo test --workspace
+cargo clippy --workspace --all-targets -- -D warnings
+cargo fmt --all --check
+```
+
+Needs `protoc` (CI installs `protobuf-compiler`) and stable Rust (CI uses
+`dtolnay/rust-toolchain@stable`).
+
+## Related
+
+- [Registry page](https://registry.zentinelproxy.io/chaos/)
+- [Agent configuration](https://docs.zentinelproxy.io/configuration/agents/)
+- [Agent protocol v2](https://docs.zentinelproxy.io/agents/v2/)
+- [Zentinel](https://github.com/zentinelproxy/zentinel)
 
 ## License
 
-MIT License - see [LICENSE](LICENSE) for details.
+MIT (declared in Cargo.toml; this repository has no LICENSE file yet).
+
+---
+
+<p align="center">
+  <sub>Part of <a href="https://zentinelproxy.io">Zentinel</a>, the security-first reverse proxy. The shisa guards the gate.</sub>
+</p>
