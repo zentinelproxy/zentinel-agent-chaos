@@ -228,7 +228,7 @@ Needs `protoc` (CI installs `protobuf-compiler`) and stable Rust (CI uses
 
 ## License
 
-MIT (declared in Cargo.toml; this repository has no LICENSE file yet).
+MIT, see [`LICENSE`](LICENSE).
 
 ---
 
