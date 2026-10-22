@@ -81,3 +81,23 @@ jobs:
       - name: Install protoc
         run: sudo apt-get update && sudo apt-get install -y protobuf-compiler
       - run: cargo test --workspace
+
+  # The release pipeline on one platform, without publishing: builds the
+  # release binary with --locked and runs scripts/smoke-test.sh behind the
+  # latest Zentinel release, so a change that would break a release fails
+  # here first.
+  smoke:
+    name: Smoke
+    uses: zentinelproxy/.github/.github/workflows/agent-release.yml@v1
+    permissions:
+      contents: read
+    with:
+      binary: zentinel-chaos-agent
+      # Path dependency ../zentinel-agent-rust-sdk (zentinel-agent-sdk 0.3.0,
+      # origin/main as of this release). Bump the SHA deliberately.
+      siblings: |
+        zentinelproxy/zentinel-agent-rust-sdk@d122ece8bfce1013041d92898f624c08f1669851
+      smoke-command: scripts/smoke-test.sh
+      harness-ref: v1
+      platforms: '["linux-x86_64"]'
+      cache: true

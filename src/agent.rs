@@ -188,7 +188,7 @@ impl Agent for ChaosAgent {
         }
 
         let method = request.method();
-        let path = request.path();
+        let path = request.path_only();
         let headers = Self::flatten_headers(request.headers());
 
         // Check excluded paths
@@ -323,7 +323,9 @@ impl AgentHandlerV2 for ChaosAgent {
         }
 
         let method = &event.method;
-        let path = &event.uri;
+        // Match on the path alone: a query string must not move a request
+        // out of (or into) an experiment or an excluded path.
+        let path = event.uri.split('?').next().unwrap_or_default();
         let headers = Self::flatten_headers(&event.headers);
 
         // Check excluded paths

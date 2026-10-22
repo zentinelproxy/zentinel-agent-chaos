@@ -1,6 +1,6 @@
 //! Chaos Engineering Agent CLI.
 
-use anyhow::Result;
+use anyhow::{Context, Result};
 use clap::Parser;
 use std::net::SocketAddr;
 use std::path::PathBuf;
@@ -9,20 +9,27 @@ use tracing_subscriber::EnvFilter;
 use zentinel_agent_chaos::{ChaosAgent, Config};
 use zentinel_agent_sdk::v2::{AgentRunnerV2, TransportConfig};
 
+const DEFAULT_CONFIG: &str = "chaos.yaml";
+const DEFAULT_SOCKET: &str = "/tmp/zentinel-chaos.sock";
+
 #[derive(Parser, Debug)]
-#[command(name = "zentinel-agent-chaos")]
+#[command(name = "zentinel-chaos-agent")]
 #[command(
     about = "Chaos Engineering agent for Zentinel - controlled fault injection for resilience testing"
 )]
 #[command(version)]
 struct Args {
-    /// Path to configuration file
-    #[arg(short, long, default_value = "chaos.yaml")]
-    config: PathBuf,
+    /// Path to configuration file. Without it, `chaos.yaml` in the working
+    /// directory is used if it exists; otherwise the agent starts with no
+    /// experiments (it injects nothing until configured).
+    #[arg(short, long)]
+    config: Option<PathBuf>,
 
-    /// Unix socket path
-    #[arg(short, long, default_value = "/tmp/zentinel-chaos.sock")]
-    socket: PathBuf,
+    /// Unix socket path (UDS transport, agent protocol v2).
+    /// Default: /tmp/zentinel-chaos.sock. With --grpc-address the socket is
+    /// served too only when given explicitly.
+    #[arg(short, long)]
+    socket: Option<PathBuf>,
 
     /// gRPC server address (e.g., "0.0.0.0:50051")
     #[arg(long, value_name = "ADDR")]
@@ -148,8 +155,23 @@ async fn main() -> Result<()> {
         .init();
 
     // Load configuration
-    info!(config = %args.config.display(), "Loading configuration");
-    let mut config = Config::from_file(&args.config)?;
+    // An explicit --config must exist and be valid; the implicit chaos.yaml
+    // is optional.
+    let config_path = args
+        .config
+        .clone()
+        .or_else(|| Some(PathBuf::from(DEFAULT_CONFIG)).filter(|p| p.exists()));
+    let mut config = match config_path {
+        Some(path) => {
+            info!(config = %path.display(), "Loading configuration");
+            Config::from_file(&path)
+                .with_context(|| format!("Failed to load configuration {}", path.display()))?
+        }
+        None => {
+            info!("No configuration file, starting with no experiments");
+            Config::default()
+        }
+    };
 
     // Override dry_run if specified on command line
     if args.dry_run {
@@ -167,21 +189,26 @@ async fn main() -> Result<()> {
     let agent = ChaosAgent::new(config);
 
     // Configure transport based on CLI options
-    let transport = match args.grpc_address {
-        Some(grpc_addr) => {
+    let transport = match (args.grpc_address, args.socket) {
+        (Some(grpc_addr), Some(socket)) => {
             info!(
                 grpc_address = %grpc_addr,
-                socket = %args.socket.display(),
+                socket = %socket.display(),
                 "Starting Chaos Engineering agent with gRPC and UDS (v2 protocol)"
             );
             TransportConfig::Both {
                 grpc_address: grpc_addr,
-                uds_path: args.socket,
+                uds_path: socket,
             }
         }
-        None => {
-            info!(socket = %args.socket.display(), "Starting Chaos Engineering agent with UDS (v2 protocol)");
-            TransportConfig::Uds { path: args.socket }
+        (Some(grpc_addr), None) => {
+            info!(grpc_address = %grpc_addr, "Starting Chaos Engineering agent with gRPC (v2 protocol)");
+            TransportConfig::Grpc { address: grpc_addr }
+        }
+        (None, socket) => {
+            let socket = socket.unwrap_or_else(|| PathBuf::from(DEFAULT_SOCKET));
+            info!(socket = %socket.display(), "Starting Chaos Engineering agent with UDS (v2 protocol)");
+            TransportConfig::Uds { path: socket }
         }
     };
 

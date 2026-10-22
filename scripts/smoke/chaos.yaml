@@ -1,0 +1,52 @@
+# Configuration for scripts/smoke-test.sh: every experiment hits 100% of its
+# requests, so the outcome is deterministic.
+settings:
+  enabled: true
+  dry_run: false
+  log_injections: true
+
+safety:
+  max_affected_percent: 100
+  excluded_paths:
+    - /chaos/excluded
+
+experiments:
+  - id: smoke-error
+    targeting:
+      paths:
+        - exact: /chaos/error
+      percentage: 100
+    fault:
+      type: error
+      status: 503
+      message: "Chaos: injected"
+      headers:
+        x-chaos-injected: "true"
+
+  - id: smoke-timeout
+    targeting:
+      paths:
+        - exact: /chaos/timeout
+      percentage: 100
+    fault:
+      type: timeout
+      duration_ms: 100
+
+  - id: smoke-latency
+    targeting:
+      paths:
+        - exact: /chaos/slow
+      percentage: 100
+    fault:
+      type: latency
+      fixed_ms: 200
+
+  # Would hit everything under /chaos/, but /chaos/excluded is excluded.
+  - id: smoke-catch-all
+    targeting:
+      paths:
+        - prefix: /chaos/excluded
+      percentage: 100
+    fault:
+      type: error
+      status: 500

@@ -1,6 +1,6 @@
 [package]
 name = "zentinel-agent-chaos"
-version = "0.2.0"
+version = "0.5.0"
 edition = "2021"
 authors = ["Zentinel Core Team"]
 description = "Chaos Engineering agent for Zentinel - controlled fault injection for resilience testing"
