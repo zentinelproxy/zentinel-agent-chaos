@@ -142,13 +142,14 @@ everything here.
 
 | Option | Default | Meaning |
 |---|---|---|
-| `-c`, `--config` | `chaos.yaml` | Path to the YAML file. The file must exist. |
-| `-s`, `--socket` | `/tmp/zentinel-chaos.sock` | Unix socket to listen on. |
-| `--grpc-address` | none | Also serve gRPC on this address (e.g. `0.0.0.0:50051`), next to the socket. |
+| `-c`, `--config` | `chaos.yaml` if present | Path to the YAML file. Without the option, `chaos.yaml` in the working directory is used if it exists, otherwise the agent starts with no experiments and injects nothing. A `--config` file that does not exist or does not validate is an error. |
+| `-s`, `--socket` | `/tmp/zentinel-chaos.sock` | Unix socket to listen on (agent protocol v2). |
+| `--grpc-address` | none | Listen for gRPC (agent protocol v2) on this address instead, e.g. `127.0.0.1:50051`. The Unix socket is served as well only if `--socket` is also given. |
 | `-L`, `--log-level` | `info` | Log level. `RUST_LOG`, if set, takes precedence. |
 | `--dry-run` | off | Log faults instead of applying them (overrides `settings.dry_run`). |
 | `--validate` | off | Load and validate the file, then exit. |
 | `--print-config` | off | Print an example file and exit. |
+| `--version` | | Print `zentinel-chaos-agent <version>` and exit. |
 
 ### YAML file
 
@@ -171,10 +172,10 @@ Unknown keys are ignored, so check spelling with care.
 | `experiments[].targeting.percentage` | `100` | Share of matching requests to affect, 0 to 100. |
 | `experiments[].fault` | required | One of the faults below, selected by `type`. |
 
-Paths are matched against the request URI as Zentinel sends it, which includes
-the query string: `exact: "/api/payments"` does not match
-`/api/payments?id=1`, and `/health?probe=1` is **not** excluded by `/health`.
-Use `prefix` or `regex` where a query string can occur.
+Paths are matched without the query string: `exact: "/api/payments"` matches
+`/api/payments?id=1`, and `/health?probe=1` is excluded by `/health`. (Before
+0.5.0 the query string was part of the match, so it could move a request out
+of an excluded path.)
 
 ### Faults
 
@@ -205,6 +206,25 @@ The delay happens inside the agent call, so the agent's `timeout-ms` (and the
 filter's, if set) must be longer than the longest `latency`, `throttle` or
 `timeout` fault. Otherwise Zentinel gives up on the agent first and, with
 `failure-mode "open"`, forwards the request without the fault.
+
+## Releases and smoke test
+
+Releases are built from their tag by the shared pipeline in
+[`zentinelproxy/.github`](https://github.com/zentinelproxy/.github)
+(`agent-release.yml`): each platform's binary is run behind a real Zentinel
+by [`scripts/smoke-test.sh`](scripts/smoke-test.sh) before anything is
+published, and CI runs the same smoke job on every push. It runs the agent once with no
+configuration (nothing is injected), then with
+[`scripts/smoke/chaos.yaml`](scripts/smoke/chaos.yaml) over the Unix socket and
+over gRPC, fail-closed: an `error` fault answers `503` without reaching the
+upstream (also with a query string), a `timeout` fault `504`, a `latency`
+fault forwards, an excluded path is forwarded although an experiment targets
+it, and with the agent stopped requests are refused. Locally:
+
+```bash
+AGENT_SMOKE=../.github/agent-smoke/smoke.py \
+  scripts/smoke-test.sh target/release/zentinel-chaos-agent ./zentinel
+```
 
 ## Development
 
