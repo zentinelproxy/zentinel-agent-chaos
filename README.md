@@ -135,10 +135,10 @@ cargo build --release   # target/release/zentinel-chaos-agent
 
 ## Configuration
 
-The agent takes its settings from its command line and its YAML file. It has an
-`on_configure` handler, but that only logs what it receives, and Zentinel 0.6.50
-does not forward an `agent { config { ... } }` block in any case, so set
-everything here.
+The agent takes its settings from its command line and its YAML file. Zentinel
+26.10_8 and later send the agent block's `config { }` on every connection
+(releases up to 0.6.50 never did), but the agent's `on_configure` handler only
+logs what it receives and applies nothing, so set everything here.
 
 | Option | Default | Meaning |
 |---|---|---|
